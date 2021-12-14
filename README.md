@@ -1,4 +1,5 @@
-What is it:
+What is it?
+
 	Standalone editor for Defold .atlas files.
 
 	I decided to create this because I found Defold's built-in .atlas editor to be a bit lacking in terms of organization:
@@ -11,6 +12,7 @@ What is it:
 	Includes both standalone .jar file and source code. Should work with java 1.8+, but I've only tested on 14+
 
 Features:
+
 	Every feature from the built-in editor is here, with the exception of: 
 		- Showing how textures will be packed/how large the atlas will be 
 		- The built-in editor has a very useful search function that can make it easy to find and add images from different folders with similar keywords (maybe I'll work on replicating this in the future)
