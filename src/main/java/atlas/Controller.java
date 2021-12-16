@@ -1026,6 +1026,13 @@ public class Controller implements Initializable{
                 clipboard.add(new TreeItem<>(deepCopy(i.getValue())));
             }
         }
+        for(TreeItem<AtlasNode> item : clipboard) {
+            if(item.getValue().getChildlist() != null) {
+                for(AtlasNode node : item.getValue().getChildlist()) {
+                    recursiveAddToTree(item, node);
+                }
+            }
+        }
     }
 
     private void pasteItems(TreeItem item) {
