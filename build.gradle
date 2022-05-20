@@ -1,0 +1,45 @@
+
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.9'
+    id "com.github.johnrengelman.shadow" version "6.0.0"
+}
+
+group 'atlas'
+mainClassName = 'atlas.Launcher'
+version '1.0-SNAPSHOT'
+apply plugin: 'java'
+sourceCompatibility = '1.9'
+targetCompatibility = '1.9'
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    modules = ['javafx.controls', 'javafx.fxml', "javafx.base"]
+    version = '11.0.2'
+}
+
+jar {
+    from {
+        configurations.runtime.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+        configurations.compile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    manifest {
+        attributes 'Main-Class': 'atlas.Launcher'
+    }
+
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+}
+
+
+application {
+    mainClass = 'atlas.Launcher'
+}
+

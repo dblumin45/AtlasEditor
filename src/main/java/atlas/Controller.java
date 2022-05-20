@@ -18,10 +18,7 @@ import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import java.io.*;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.ResourceBundle;
+import java.util.*;
 
 public class Controller implements Initializable{
     @FXML
@@ -66,9 +63,11 @@ public class Controller implements Initializable{
     private boolean hasUnsavedChanges = false;
     private final boolean showRoot = true;
     private int cursor = 0;
+    private final int ANIMATION_HIERARCHY = 2;
     private ArrayList<String> backupList;
     private ArrayList<ArrayList<Boolean>> expandedList;
     private ArrayList<String> toWrite;
+    private ArrayList <String> animationNames = new ArrayList<>();
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         // Try to read config file for root directory
@@ -118,7 +117,7 @@ public class Controller implements Initializable{
 
     private void loadAtlas(String newPath) {
         File atlas;
-
+        animationNames = new ArrayList<>();
         // if passed in a path, try to load atlas from that
         if(newPath != null) {
             atlas = new File(newPath);
@@ -209,6 +208,7 @@ public class Controller implements Initializable{
                                         id, imageList, fps, flipHorizontal, Integer.parseInt(getValue(line).trim()) == 1, playback
                                 );
 
+                                animationNames.add(id);
                                 // reset imageList
                                 imageList = new ArrayList<>();
 
@@ -354,7 +354,7 @@ public class Controller implements Initializable{
             for(AtlasNode child : childList) {
                 recursiveGetImages(imageList, child);
             }
-        } else if (node.getClass() == AtlasImage.class) {
+        } else if (node.getClass() == AtlasAnimation.class) {
             imageList.add(new Image("file:///" + root.getAbsolutePath() + node.getName()));
         }
     }
@@ -529,6 +529,11 @@ public class Controller implements Initializable{
 
                         } else { // otherwise, reset url field
                             urlField.setText(node.getName());
+                            Alert urlAlert = new Alert(Alert.AlertType.ERROR);
+                            urlAlert.setContentText("No file with url: " + tempUrl);
+                            urlAlert.setHeaderText(null);
+                            urlAlert.setTitle(null);
+                            urlAlert.showAndWait();
                         }
                     }
                 });
@@ -574,10 +579,27 @@ public class Controller implements Initializable{
                 // name field can be updated freely
                 nameField.setOnKeyPressed(event -> {
                     if(event.getCode() == KeyCode.ENTER) {
-                        flagChange();
-                        node.setName(nameField.getText());
-                        updateTree();
+                        String name = nameField.getText();
+                        if (node.getClass() != AtlasAnimation.class) {
+                            flagChange();
+                            node.setName(name);
+                        } else {
+                            if (!animationNames.contains(name)) {
+                                animationNames.remove(node.getName());
+                                node.setName(name);
+                                animationNames.add(name);
+                                flagChange();
+                            } else {
+                                nameField.setText(node.getName());
+                                Alert nameAlert = new Alert(Alert.AlertType.ERROR);
+                                nameAlert.setContentText("Animation with name '" + name + "' already exists. Animation names must be unique!");
+                                nameAlert.setHeaderText(null);
+                                nameAlert.setTitle(null);
+                                nameAlert.showAndWait();
+                            }
+                        }
 
+                        updateTree();
                     }
                 });
                 box.getChildren().addAll(
@@ -741,6 +763,7 @@ public class Controller implements Initializable{
 
     // check for clashes in animation name
     private boolean isUniqueAnimation(String name, TreeItem<AtlasNode> item) {
+        /*
         boolean unique = true;
         if(item.getValue().getHierarchy() == 2 && item.getValue().getName().equals(name)) {
             unique = false;
@@ -753,6 +776,8 @@ public class Controller implements Initializable{
             }
         }
         return unique;
+        */
+         return !animationNames.contains(name);
     }
 
     // set up context menu based on selected node type
@@ -844,6 +869,7 @@ public class Controller implements Initializable{
                     }
                 }
             }
+            updateProperties(node);
         });
 
         // create new group
@@ -869,15 +895,16 @@ public class Controller implements Initializable{
             Optional<String> result = null;
             do {
                 if(result != null) {
-                    textInputDialog.setContentText("Animation name " + result.get() + " is already taken. Animation names must be unique!");
+                    textInputDialog.setContentText("Animation name '" + result.get() + "' is already taken. Animation names must be unique!");
                 }
                 result = textInputDialog.showAndWait();
             } while(result.isPresent() && !isUniqueAnimation(result.get(), rootItem));
             if(result.isPresent()) {
                 // check for duplicate animation names
-
+                String animationName = result.get();
                 flagChange();
-                AtlasAnimation newAnimation = new AtlasAnimation(result.get(), new ArrayList<>(), 60, false, false, "PLAYBACK_NONE");
+                AtlasAnimation newAnimation = new AtlasAnimation(animationName, new ArrayList<>(), 60, false, false, "PLAYBACK_ONCE_FORWARD");
+                animationNames.add(animationName);
                 TreeItem<AtlasNode> parent = item;
                 while(parent.getValue().getHierarchy() > 1) {
                     parent = parent.getParent();
@@ -969,9 +996,29 @@ public class Controller implements Initializable{
     }
 
     private void cutItems() {
-        copyItems();
-        removeItems(clipboard);
+        copyItems(true);
+        removeItems();
         updateTree();
+    }
+
+    private String validAnimationName(String name) {
+        // animation name is taken
+        if (animationNames.contains(name)) {
+            // if not already a copy, append copy to end of the name
+
+            // contains 'copy'
+            int index = name.indexOf("copy");
+            if (index > -1) {
+                // increment number at the end of copy
+                String baseName = name.substring(0, index + 4);
+                int copyNumber = Integer.parseInt(name.substring(index + 4));
+                name = validAnimationName(baseName + (copyNumber + 1) );
+
+            } else { // first copy
+                name = validAnimationName(name + "copy0");
+            }
+        }
+        return name;
     }
 
     // create and return copy of node and its children
@@ -999,6 +1046,8 @@ public class Controller implements Initializable{
 
             case 2:
                 copy = new AtlasAnimation((AtlasAnimation) node);
+                // animation names must be unique
+                copy.setName(validAnimationName(copy.getName()));
                 break;
 
             case 3:
@@ -1017,12 +1066,43 @@ public class Controller implements Initializable{
         return copy;
     }
 
-    // copy selected items, if they are not children of something already in the clipboard
     private void copyItems() {
+        copyItems(false);
+    }
+    // copy selected items, if they are not children of something already in the clipboard
+    private void copyItems(boolean isCut) {
         clipboard = new ArrayList<>();
         for(TreeItem<AtlasNode> i : treeView.getSelectionModel().getSelectedItems()) {
             TreeItem<AtlasNode> parent = i.getParent();
             if(parent == null || !treeView.getSelectionModel().getSelectedItems().contains(parent)) {
+                AtlasNode node = i.getValue();
+                if (isCut) {
+                    if (node.getClass() == AtlasAnimation.class) {
+                        String name = node.getName();
+                        if(animationNames.contains(name)) {
+                            animationNames.remove(name);
+                        }
+                    }
+                }
+
+                clipboard.add(new TreeItem<>(deepCopy(node)));
+            }
+        }
+        for(TreeItem<AtlasNode> item : clipboard) {
+            if(item.getValue().getChildlist() != null) {
+                for(AtlasNode node : item.getValue().getChildlist()) {
+                    recursiveAddToTree(item, node);
+                }
+            }
+        }
+
+    }
+
+    private void copyItems(ArrayList<TreeItem<AtlasNode>> items) {
+        clipboard = new ArrayList<>();
+        for(TreeItem<AtlasNode> i : items) {
+            TreeItem<AtlasNode> parent = i.getParent();
+            if(parent == null || !items.contains(parent)) {
                 clipboard.add(new TreeItem<>(deepCopy(i.getValue())));
             }
         }
@@ -1040,6 +1120,7 @@ public class Controller implements Initializable{
             addItems(clipboard, item);
         }
         updateTree();
+        copyItems( new ArrayList<>(clipboard) );
     }
 
     @FXML
@@ -1064,6 +1145,9 @@ public class Controller implements Initializable{
         ArrayList<TreeItem<AtlasNode>> changedList = new ArrayList<>();
         for (TreeItem<AtlasNode> listItem : itemList) {
             AtlasNode listNode = listItem.getValue();
+            if (listNode.getClass() == AtlasAnimation.class) {
+                animationNames.remove(listNode.getName());
+            }
             TreeItem parentItem = listItem.getParent();
             if(parentItem != null) {
                 AtlasNode parentNode = (AtlasNode) parentItem.getValue();
@@ -1079,9 +1163,7 @@ public class Controller implements Initializable{
             }
         }
         updateFrames(changedList);
-
         updateTree();
-
     }
 
 
@@ -1092,6 +1174,12 @@ public class Controller implements Initializable{
         for(TreeItem<AtlasNode> item : clipboard) {
 
             AtlasNode draggedNode = item.getValue();
+            if (draggedNode.getClass() == AtlasAnimation.class) {
+                String nodeName = draggedNode.getName();
+                if (!animationNames.contains(nodeName)) {
+                    animationNames.add(nodeName);
+                }
+            }
 
             // get initial index of item
             // same level; put dragged item into same list as hoveredNode

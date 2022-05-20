@@ -1,0 +1,1 @@
+root=C:\Users\dblum\Desktop\Defold\Metroidvania
