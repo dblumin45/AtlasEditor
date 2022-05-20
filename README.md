@@ -10,6 +10,16 @@ What is it?
 		- No click and drag to reorder animations (only key commands to shift up/down one at a time)
 		
 	Includes both standalone .jar file and source code. Should work with java 1.8+, but I've only tested on 14+
+	
+Some Considerations:
+
+	- Every change this editor makes to .atlas files is fully compatible with Defold, I've been using it for a couple months with no issues, 
+	however you should still make backups of work you can't afford to lose, on the off chance there's some use case I never ran into that can cause issues. 
+	- My features all rely on parsing keywords with the '#' comment delimeter that Defold ignores, 
+	so there should be no conflict with or corruption of the format it expects.
+	- Editing and saving an atlas with Defold's built in editor will remove any group/breakpoint organization you've added to it, 
+	as anything it interprets as comment lines is ignored when writing the updated atlas
+	
 
 Features:
 
@@ -17,11 +27,6 @@ Features:
 		- Showing how textures will be packed/how large the atlas will be 
 		- The built-in editor has a very useful search function that can make it easy to find and add images from different folders with 
 		similar keywords (maybe I'll work on replicating this in the future)
-	
-	Every change this editor makes to .atlas files is fully compatible with Defold, I've been using it for a couple months with no issues, 
-	however you should still make backups of work you can't afford to lose, on the off chance there's some use case I never ran into that can cause issues. 
-	My features all rely on parsing keywords with the '#' comment delimeter that Defold ignores, 
-	so there should be no conflict with or corruption of the format it expects.
 	
 	The new features this editor has mostly address my specific needs and issues with the built-in editor:
 		- You can encapsulate animations and images in named groups:
