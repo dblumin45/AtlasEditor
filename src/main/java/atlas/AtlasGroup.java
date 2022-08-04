@@ -8,7 +8,7 @@ public class AtlasGroup extends AtlasNode {
     }
 
     public AtlasGroup(AtlasGroup node) {
-        this(node.getName(), node.getChildlist());
+        this(node.getName(), node.getChildList());
     }
 
     @Override

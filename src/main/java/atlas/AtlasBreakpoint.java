@@ -9,7 +9,7 @@ public class AtlasBreakpoint extends AtlasNode {
     }
 
     public AtlasBreakpoint(AtlasBreakpoint node) {
-        this(node.getName(), node.getChildlist());
+        this(node.getName(), node.getChildList());
     }
 
     @Override

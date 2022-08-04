@@ -17,7 +17,7 @@ public class AtlasAnimation extends AtlasNode {
     }
 
     public AtlasAnimation(AtlasAnimation node) {
-        this(node.getName(), node.getChildlist(), node.getFps(), node.isFlipHorizontal(), node.isFlipVertical(), node.getPlayback());
+        this(node.getName(), node.getChildList(), node.getFps(), node.isFlipHorizontal(), node.isFlipVertical(), node.getPlayback());
     }
 
     public int getFps() {
@@ -32,7 +32,7 @@ public class AtlasAnimation extends AtlasNode {
     public int getChildCount() {
         int count = 0;
 
-        for(AtlasNode node : getChildlist()) {
+        for(AtlasNode node : getChildList()) {
             Class c = node.getClass();
             if (c == AtlasImage.class) {
                 count++;

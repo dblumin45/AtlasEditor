@@ -76,6 +76,8 @@ public class Controller implements Initializable{
             for(String line; (line=reader.readLine()) != null;) {
                 if(line.contains("root=")){
                     root = new File(getValue(line, "="));
+                } else if(line.contains("path=")) {
+                    filePath = getValue(line, "=");
                 } else {
                     toWrite.add(line);
                 }
@@ -113,6 +115,11 @@ public class Controller implements Initializable{
         // undo and redo options disabled until changes are made
         undoButton.setDisable(true);
         redoButton.setDisable(true);
+
+        if (filePath != null) {
+            loadAtlas(filePath);
+            buildTree();
+        }
     }
 
     private void loadAtlas(String newPath) {
@@ -129,7 +136,9 @@ public class Controller implements Initializable{
             atlas = atlasChooser.showOpenDialog(null);
             if(atlas != null) {
                 filePath = atlas.getAbsolutePath();
+                writeConfig();
             }
+
         }
 
         // atlas file exists
@@ -349,12 +358,12 @@ public class Controller implements Initializable{
 
     // get all nested images from node
     private void recursiveGetImages(ArrayList<Image> imageList, AtlasNode node) {
-        ArrayList<AtlasNode> childList = node.getChildlist();
+        ArrayList<AtlasNode> childList = node.getChildList();
         if(childList != null) {
             for(AtlasNode child : childList) {
                 recursiveGetImages(imageList, child);
             }
-        } else if (node.getClass() == AtlasAnimation.class) {
+        } else if (node.getClass() == AtlasImage.class) {
             imageList.add(new Image("file:///" + root.getAbsolutePath() + node.getName()));
         }
     }
@@ -382,9 +391,9 @@ public class Controller implements Initializable{
                             ArrayList<Image> imageList = new ArrayList<>();
                             recursiveGetImages(imageList, node);
                             int fps;
-
                             // don't need to play if animation only has one image
                             if(imageList.size() > 1) {
+
                                 // inherit parent fps for breakpoints
                                 if (node.getClass() == AtlasBreakpoint.class) {
                                     AtlasAnimation parent = (AtlasAnimation) item.getParent().getValue();
@@ -477,8 +486,8 @@ public class Controller implements Initializable{
         list.clear();
 
         AtlasNode image = node;
-        while(image.getChildlist() != null && image.getChildlist().size() > 0) {
-            image = image.getChildlist().get(0);
+        while(image.getChildList() != null && image.getChildList().size() > 0) {
+            image = image.getChildList().get(0);
         }
         String url = root.getAbsolutePath() + image.getName();
         imageView.setImage(new Image("file:///" + url));
@@ -855,12 +864,12 @@ public class Controller implements Initializable{
                     } else {
                         // insert at end of this list
                         image.setFrame(newNode.getChildCount() + 1);
-                        newNode.getChildlist().add(image);
+                        newNode.getChildList().add(image);
                         parentItem.getChildren().add(new TreeItem<>(image));
                     }
                 }
                 int count = 1;
-                for(AtlasNode newNode : parentItem.getValue().getChildlist()) {
+                for(AtlasNode newNode : parentItem.getValue().getChildList()) {
                     try {
                         AtlasImage image = (AtlasImage) newNode;
                         image.setFrame(count++);
@@ -1025,7 +1034,7 @@ public class Controller implements Initializable{
     private AtlasNode deepCopy(AtlasNode node) {
         ArrayList<AtlasNode> childList = new ArrayList<>();
         AtlasNode copy;
-        ArrayList<AtlasNode> children = node.getChildlist();
+        ArrayList<AtlasNode> children = node.getChildList();
 
         // if node has children, add copies of each to new childList
         if (children != null) {
@@ -1060,7 +1069,7 @@ public class Controller implements Initializable{
         }
 
         // assign new childList to copy
-        if (copy.getChildlist() != null) {
+        if (copy.getChildList() != null) {
             copy.setChildList(childList);
         }
         return copy;
@@ -1089,8 +1098,8 @@ public class Controller implements Initializable{
             }
         }
         for(TreeItem<AtlasNode> item : clipboard) {
-            if(item.getValue().getChildlist() != null) {
-                for(AtlasNode node : item.getValue().getChildlist()) {
+            if(item.getValue().getChildList() != null) {
+                for(AtlasNode node : item.getValue().getChildList()) {
                     recursiveAddToTree(item, node);
                 }
             }
@@ -1107,8 +1116,8 @@ public class Controller implements Initializable{
             }
         }
         for(TreeItem<AtlasNode> item : clipboard) {
-            if(item.getValue().getChildlist() != null) {
-                for(AtlasNode node : item.getValue().getChildlist()) {
+            if(item.getValue().getChildList() != null) {
+                for(AtlasNode node : item.getValue().getChildList()) {
                     recursiveAddToTree(item, node);
                 }
             }
@@ -1225,7 +1234,7 @@ public class Controller implements Initializable{
                     AtlasImage image = (AtlasImage) item.getValue();
                     image.setFrame(count++);
                 } else if(item.getValue().getClass() == AtlasBreakpoint.class) {
-                    for(AtlasNode childNode : item.getValue().getChildlist()) {
+                    for(AtlasNode childNode : item.getValue().getChildList()) {
                         ((AtlasImage)childNode).setFrame(count++);
                     }
                 }
@@ -1304,7 +1313,7 @@ public class Controller implements Initializable{
     private void recursiveAddToTree(TreeItem rootItem, AtlasNode node) {
         TreeItem<AtlasNode> item = new TreeItem<>(node);
         rootItem.getChildren().add(item);
-        ArrayList<AtlasNode> childList = node.getChildlist();
+        ArrayList<AtlasNode> childList = node.getChildList();
         if(childList != null) {
             for(AtlasNode child : childList) {
                 recursiveAddToTree(item, child);
@@ -1434,6 +1443,10 @@ public class Controller implements Initializable{
             PrintWriter writer = new PrintWriter(configFile);
 
             writer.println("root="+root.getAbsolutePath());
+            System.out.println(filePath);
+            if(filePath != null) {
+                writer.println("path="+filePath);
+            }
             if(toWrite != null) {
                 for(String line : toWrite) {
                     writer.println(line);
@@ -1460,8 +1473,8 @@ public class Controller implements Initializable{
             writer.println("sprite_trim_mode: " + ((AtlasImage) node).getTrimMode());
             writer.println("}");
         }
-        if(node.getChildlist() != null) {
-            for(AtlasNode child : node.getChildlist()) {
+        if(node.getChildList() != null) {
+            for(AtlasNode child : node.getChildList()) {
                 printNode(writer, child);
             }
         }

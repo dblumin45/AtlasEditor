@@ -52,7 +52,7 @@ public abstract class AtlasNode {
 
     public abstract String getSummary();
 
-    public ArrayList<AtlasNode> getChildlist() {
+    public ArrayList<AtlasNode> getChildList() {
         return this.childList;
     }
 
