@@ -5,20 +5,28 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.robot.Robot;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
+
+//import java.awt.*;
 import java.io.*;
 import java.net.URL;
 import java.util.*;
+import java.util.List;
 
 public class Controller implements Initializable{
     @FXML
@@ -44,7 +52,11 @@ public class Controller implements Initializable{
     @FXML
     MenuItem saveAsButton;
     @FXML
+    MenuItem occlusionButton;
+    @FXML
     TreeView<AtlasNode> treeView;
+    @FXML
+    VBox imageBox;
     @FXML
     ImageView imageView;
     @FXML
@@ -85,6 +97,8 @@ public class Controller implements Initializable{
         } catch (IOException ioe) {
 
         }
+
+        imageBox.setBackground(new Background(new BackgroundFill(Color.GRAY, CornerRadii.EMPTY, Insets.EMPTY)));
 
         // if root not set in config file, open directory chooser to pick root
         if(root == null) {
@@ -204,7 +218,9 @@ public class Controller implements Initializable{
                             playback = "";
                             fps = 0;
                             imageCount = 0;
-                        } else if (inAnimation) {
+                        } else if(line.contains("images {")) { // start new image
+                            inImage = true;
+                        } else if (inAnimation || inImage) {
                             if (line.contains("id:")) {
                                 id = getValue(line).replace('"', ' ').trim();
                             } else if(line.contains("playback:")) {
@@ -237,9 +253,6 @@ public class Controller implements Initializable{
                             } else if(line.contains("fps:")) {
                                 fps = Integer.parseInt(getValue(line).replace('"', ' ').trim());
 
-                            } else if(line.contains("images {")) { // start new image
-                                inImage = true;
-
                             } else if(line.contains("image:")) {
                                 imageID = getValue(line).replace('"', ' ').trim();
 
@@ -249,9 +262,13 @@ public class Controller implements Initializable{
 
                                 // add image to current breakpoint (if present)
                                 if(inBreakpoint) {
-                                    AtlasBreakpoint breakPoint = (AtlasBreakpoint) imageList.get(imageList.size()-1);
+                                    AtlasBreakpoint breakPoint = (AtlasBreakpoint) imageList.get(imageList.size() - 1);
                                     breakPoint.addChild(image);
+                                } else if(inGroup && !inAnimation) {
+                                    AtlasGroup group = (AtlasGroup) groupList.get(groupList.size() - 1);
+                                    group.addChild(image);
                                 } else { // or raw imagelist
+
                                     imageList.add(image);
                                 }
                             }
@@ -486,11 +503,17 @@ public class Controller implements Initializable{
         list.clear();
 
         AtlasNode image = node;
-        while(image.getChildList() != null && image.getChildList().size() > 0) {
+
+        while( (image.getClass() != AtlasImage.class) && image.getChildList() != null && image.getChildList().size() > 0) {
             image = image.getChildList().get(0);
         }
+
+
         String url = root.getAbsolutePath() + image.getName();
         imageView.setImage(new Image("file:///" + url));
+        //imageView.setFitHeight(100);
+        imageView.setPreserveRatio(true);
+
 
         // if selected node is an Image:
         if(node.getClass() == AtlasImage.class) {
@@ -1260,7 +1283,7 @@ public class Controller implements Initializable{
             undoButton.setDisable(false);
             backupList.add(temp.getAbsolutePath());
             expandedList.add(toExpandedList(flattenTree()));
-            saveAtlas(temp.getAbsolutePath(), false);
+            saveAtlas(temp.getAbsolutePath(), false, false);
             temp.deleteOnExit();
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -1340,7 +1363,7 @@ public class Controller implements Initializable{
             Optional<ButtonType> result = unsavedAlert.showAndWait();
 
             if(result.orElse(null) == saveButton) {
-                shouldExit = saveAtlas(null, true);
+                shouldExit = saveAtlas(null, true, false);
             } else if(result.orElse(null) != exitButton) {
                 shouldExit = false;
             }
@@ -1459,7 +1482,7 @@ public class Controller implements Initializable{
     }
 
     // print node data in format .atlas expects (based on node type)
-    private void printNode(PrintWriter writer, AtlasNode node) {
+    private void printNode(PrintWriter writer, AtlasNode node, boolean occlusion) {
         if(node.getClass() == AtlasGroup.class) {
             writer.println("#group: " + node.getName());
         } else if(node.getClass() == AtlasAnimation.class) {
@@ -1469,13 +1492,19 @@ public class Controller implements Initializable{
             writer.println("#sub: " + node.getName());
         } else if(node.getClass() == AtlasImage.class) {
             writer.println("images {");
-            writer.println("image: " + "\"" + node.getName() + "\"");
+            String nodeName = node.getName();
+            String originalName = node.getName();
+            if (occlusion) {
+                int extensionIndex = originalName.lastIndexOf('.');
+                nodeName = originalName.substring(0, extensionIndex) + "_occlusion" + originalName.substring(extensionIndex);
+            }
+            writer.println("image: " + "\"" + nodeName + "\"");
             writer.println("sprite_trim_mode: " + ((AtlasImage) node).getTrimMode());
             writer.println("}");
         }
         if(node.getChildList() != null) {
             for(AtlasNode child : node.getChildList()) {
-                printNode(writer, child);
+                printNode(writer, child, occlusion);
             }
         }
 
@@ -1500,19 +1529,31 @@ public class Controller implements Initializable{
 
     @FXML
     public void saveOverwrite() {
+        System.out.println(filePath);
         if(!filePath.equals("untitled")) {
-            saveAtlas(filePath, true);
+            saveAtlas(filePath, true, false);
         } else {
-            saveAtlas(null, true);
+            saveAtlas(null, true, false);
         }
     }
     @FXML
     public void saveAs() {
-        saveAtlas(null, true);
+        saveAtlas(null, true, false);
+    }
+
+    @FXML public void generateOcclusionAtlas() {
+        if (!filePath.equals("untitled")) {
+            String occlusionPath = "";
+            int extensionIndex = filePath.lastIndexOf('.');
+            occlusionPath = filePath.substring(0, extensionIndex) + "_occlusions" + filePath.substring(extensionIndex);
+            System.out.println(occlusionPath);
+            saveAtlas(occlusionPath, false, true);
+        }
+
     }
 
     // save atlas file
-    public boolean saveAtlas(String newPath, boolean properSave) {
+    public boolean saveAtlas(String newPath, boolean properSave, boolean occlusion) {
         boolean saved = true;
         File saveFile;
 
@@ -1535,7 +1576,7 @@ public class Controller implements Initializable{
                 PrintWriter writer = new PrintWriter(saveFile);
                 // write node by node to that file
                 for(TreeItem<AtlasNode> item : rootItem.getChildren()) {
-                    printNode(writer, item.getValue());
+                    printNode(writer, item.getValue(), occlusion);
                 }
                 AtlasRoot rootNode = (AtlasRoot) rootItem.getValue();
 

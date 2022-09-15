@@ -27,6 +27,7 @@
                         <KeyCodeCombination alt="UP" code="S" control="DOWN" meta="UP" shift="UP" shortcut="UP" />
                      </accelerator></MenuItem>
                   <MenuItem fx:id="saveAsButton" mnemonicParsing="false" onAction="#saveAs" text="Save As" />
+                  <MenuItem fx:id="occlusionButton" mnemonicParsing="false" onAction="#generateOcclusionAtlas" text="Generate Occlusion Atlas" />
               <MenuItem fx:id="closeButton" mnemonicParsing="false" onAction="#exit" text="Close" />
             </items>
           </Menu>
@@ -54,7 +55,7 @@
    <center>
       <HBox prefHeight="100.0" prefWidth="200.0" spacing="20.0" BorderPane.alignment="CENTER">
          <children>
-            <VBox alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefWidth="300.0" spacing="20.0" HBox.hgrow="ALWAYS">
+            <VBox fx:id="imageBox" alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minHeight="-Infinity" minWidth="-Infinity" prefWidth="300.0" spacing="20.0" HBox.hgrow="ALWAYS">
                <children>
                   <Label fx:id="frameLabel" />
                   <ImageView fx:id="imageView" pickOnBounds="true" preserveRatio="true" VBox.vgrow="ALWAYS">
