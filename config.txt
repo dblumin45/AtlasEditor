@@ -1,2 +1,2 @@
 root=C:\Users\dblum\Desktop\Defold\Metroidvania
-path=C:\Users\dblum\Desktop\Defold\Metroidvania\assets\atlases\player\player.atlas
+path=C:\Users\dblum\Desktop\Defold\Metroidvania\assets\atlases\input_icons.atlas

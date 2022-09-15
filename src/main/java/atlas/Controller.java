@@ -76,10 +76,19 @@ public class Controller implements Initializable{
     private final boolean showRoot = true;
     private int cursor = 0;
     private final int ANIMATION_HIERARCHY = 2;
-    private ArrayList<String> backupList;
-    private ArrayList<ArrayList<Boolean>> expandedList;
+    private ArrayList<String> backupList = new ArrayList<>();
+    private ArrayList<ArrayList<Boolean>> expandedList = new ArrayList<>();
     private ArrayList<String> toWrite;
     private ArrayList <String> animationNames = new ArrayList<>();
+
+    private ArrayList<TreeItem<AtlasNode>> observableToArrayList(ObservableList<TreeItem<AtlasNode>> sourceList) {
+        ArrayList<TreeItem<AtlasNode>> tempList = new ArrayList<>();
+        for (TreeItem<AtlasNode> item : sourceList) {
+            tempList.add(item);
+        }
+        return tempList;
+    }
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         // Try to read config file for root directory
@@ -281,11 +290,10 @@ public class Controller implements Initializable{
                 treeView.setRoot(rootItem);
                 addAllToTree(rootItem, animationList);
                 addAllToTree(rootItem, imageList);
-
                 for(AtlasNode group : groupList) {
                     recursiveAddToTree(rootItem, group);
                 }
-
+                updateFrames(observableToArrayList(rootItem.getChildren()));
             } catch (IOException ioe) {
                 System.err.println(ioe.getMessage());
             }
